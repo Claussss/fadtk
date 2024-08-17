@@ -28,8 +28,15 @@ def cache_embedding_files(files: Union[list[Path], str, Path], ml: ModelLoader, 
 
     :param ml_fn: A function that returns a ModelLoader instance.
     """
+    print('===========FILES BEFORE GLOBAL=============')
+    print(files)
+    print('========================')
     if isinstance(files, (str, Path)):
-        files = list(Path(files).glob('*.*'))
+        directory = Path(files)
+        files = [p for p in directory.iterdir() if p.is_file()]
+    print('===========FILES AFTER GLOBAL=============')
+    print(files)
+    print('========================')
 
     # Filter out files that already have embeddings
     files = [f for f in files if not get_cache_embedding_path(ml.name, f).exists()]

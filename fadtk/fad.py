@@ -13,6 +13,8 @@ from pathlib import Path
 from hypy_utils import write
 from hypy_utils.tqdm_utils import tq, tmap
 from hypy_utils.logging_utils import setup_logger
+from transformers import EncodecModel
+
 
 from .model_loader import ModelLoader
 from .utils import *
@@ -125,6 +127,7 @@ class FrechetAudioDistance:
         self.ml = ml
         self.audio_load_worker = audio_load_worker
         self.sox_formats = find_sox_formats(sox_path)
+        self.encodec_model = EncodecModel.from_pretrained("facebook/encodec_24khz").to(self.device)
 
         if load_model:
             self.ml.load_model()
@@ -135,7 +138,10 @@ class FrechetAudioDistance:
 
     def load_audio(self, f: Union[str, Path]):
         f = Path(f)
-
+        print('LOAD AUDIO')
+        print('=========================================')
+        print(f)
+        print('=========================================')
         # Create a directory for storing normalized audio files
         cache_dir = f.parent / "convert" / str(self.ml.sr)
         new = (cache_dir / f.name).with_suffix(".wav")
@@ -143,8 +149,20 @@ class FrechetAudioDistance:
         if not new.exists():
             cache_dir.mkdir(parents=True, exist_ok=True)
             if TORCHAUDIO_RESAMPLING:
-                x, fsorig = torchaudio.load(f)
+                if f.suffix == '.pt':
+                    fsorig = 24000
+                    # Load Encodec embedding
+                    z = torch.load(f, map_location=self.device)
+                    decoder = self.encodec_model.get_decoder()
+                    with torch.no_grad():
+                        x = decoder(z)[0] # to match [1, num_samples]
+                elif f.suffix == '.wav' or f.is_symlink():
+                    print('===============LOADING NO PT======================')
+                    print(f)
+                    print('===============LOADING NO PT==================')
+                    x, fsorig = torchaudio.load(f)
                 x = torch.mean(x,0).unsqueeze(0) # convert to mono
+                print(f'Resampling to {self.ml.sr} Hz')
                 resampler = torchaudio.transforms.Resample(
                     fsorig,
                     self.ml.sr,
@@ -154,7 +172,7 @@ class FrechetAudioDistance:
                     beta=14.769656459379492,
                 )
                 y = resampler(x)
-                torchaudio.save(new, y, self.ml.sr, encoding="PCM_S", bits_per_sample=16)
+                torchaudio.save(new, y.cpu(), self.ml.sr, encoding="PCM_S", bits_per_sample=16)
             else:                
                 sox_args = ['-r', str(self.ml.sr), '-c', '1', '-b', '16']
     
@@ -209,6 +227,9 @@ class FrechetAudioDistance:
         """
         Load embeddings for all audio files in a directory.
         """
+        print('================load embeddings ====================')
+        print(dir)
+        print('=========================================')
         files = list(Path(dir).glob("*.*"))
         log.info(f"Loading {len(files)} audio files from {dir}...")
 
@@ -275,7 +296,7 @@ class FrechetAudioDistance:
             exit(1)
 
         log.info(f"Loading embedding files from {path}...")
-        
+        print('THIS BEFORE IF CRACHES')
         mu, cov = calculate_embd_statistics_online(list(emb_dir.glob("*.npy")))
         log.info("> Embeddings statistics calculated.")
 
