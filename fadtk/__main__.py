@@ -74,12 +74,10 @@ def main():
     results = {
         'FAD': score
     }
-    print('EXP NAME:', exp_name)
-    print('OUTPUT PATH:', output_path)
     print(f'SAVING TO {output_path / f"{exp_name}_FAD.json"}')
     output_path = output_path / exp_name
     output_path.mkdir(parents=True, exist_ok=True)
-    with open(output_path / 'FAD.json', 'w') as f:
+    with open(output_path / 'FAD_fixed.json', 'w') as f:
         json.dump(results, f)
     log.info(f"The FAD {model.name} score between {baseline} and {eval} is: {score}")
 

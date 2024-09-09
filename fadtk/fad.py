@@ -138,10 +138,6 @@ class FrechetAudioDistance:
 
     def load_audio(self, f: Union[str, Path]):
         f = Path(f)
-        print('LOAD AUDIO')
-        print('=========================================')
-        print(f)
-        print('=========================================')
         # Create a directory for storing normalized audio files
         cache_dir = f.parent / "convert" / str(self.ml.sr)
         new = (cache_dir / f.name).with_suffix(".wav")
@@ -157,9 +153,6 @@ class FrechetAudioDistance:
                     with torch.no_grad():
                         x = decoder(z)[0] # to match [1, num_samples]
                 elif f.suffix == '.wav' or f.is_symlink():
-                    print('===============LOADING NO PT======================')
-                    print(f)
-                    print('===============LOADING NO PT==================')
                     x, fsorig = torchaudio.load(f)
                 x = torch.mean(x,0).unsqueeze(0) # convert to mono
                 print(f'Resampling to {self.ml.sr} Hz')
@@ -227,9 +220,6 @@ class FrechetAudioDistance:
         """
         Load embeddings for all audio files in a directory.
         """
-        print('================load embeddings ====================')
-        print(dir)
-        print('=========================================')
         files = list(Path(dir).glob("*.*"))
         log.info(f"Loading {len(files)} audio files from {dir}...")
 
@@ -296,7 +286,6 @@ class FrechetAudioDistance:
             exit(1)
 
         log.info(f"Loading embedding files from {path}...")
-        print('THIS BEFORE IF CRACHES')
         mu, cov = calculate_embd_statistics_online(list(emb_dir.glob("*.npy")))
         log.info("> Embeddings statistics calculated.")
 
